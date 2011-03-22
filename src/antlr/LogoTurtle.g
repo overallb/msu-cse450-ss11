@@ -10,6 +10,9 @@ tokens {
   NIL;
   BLOCK;
 
+// -- Functions
+ FUNCTION='to';
+
 // -- Math
   PLUS='+';
   MINUS='-';
@@ -63,14 +66,36 @@ statement
         | print
         | while_
         | if_
-        | ifelse_ ) COMMENT?
+        | ifelse_
+        | function) COMMENT?
     ;
-
 
 val: ':'^ ID;
 ref: '"'^ ID;
 
-/******************************
+ /******************************
+ *       FUNCTIONS
+ ******************************/ 
+  
+ function
+   : ('to'^ ID argument*)
+   (statement? NEWLINE!)+
+   return_
+   (statement? NEWLINE!)*
+   'end'
+   ;
+   
+  return_
+    : 'output' ':'ID NEWLINE 
+    ;
+    
+  argument
+    :  (':'ID) 
+    ;
+    
+    
+    
+ /******************************
  *       LOGIC CONTROL
  ******************************/
 
@@ -117,7 +142,8 @@ term
     : (val
     | ref
     | '('! expression ')'!
-    | NUMBER)^
+    | NUMBER
+    | FLOAT)^
     ; 
     
 unary
@@ -161,6 +187,9 @@ ID    : (ALPHA|'_') (ALPHA|DIGIT|'_')* { idCount++; };
 
 NUMBER 
       : (DIGIT)+ { numberCount++; };
+
+FLOAT
+      : (DIGIT)* '.' (DIGIT)+ {numberCount++;};
 
 NEWLINE 
       : '\r'? '\n' { newlineCount++; };
