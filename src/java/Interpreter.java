@@ -96,12 +96,39 @@ public class Interpreter {
 		exec(t);
 	}
 
-	Object add(Tree t) {
-		log.info("Adding" + t.toStringTree());
-		int x = (Integer) exec(t.getChild(0));
-		int y = (Integer) exec(t.getChild(1));
-		int z = x + y;
-		return z;
+	Object math(Tree t) {
+       Object a = exec( (CommonTree)t.getChild(0) );
+       Object b = exec( (CommonTree)t.getChild(1) );
+       if (a instanceof String || b instanceof String ) {
+    	   System.out.println("Tried to do math on a string!");
+    	   unhandledTypeError(t);
+       }
+       if ( a instanceof Float || b instanceof Float ) {
+           float x = ((Number)a).floatValue();
+           float y = ((Number)b).floatValue();
+           System.out.println("Float operation detected, converting any ints to floats.");
+           switch (t.getType()) {
+               case LogoTurtleParser.PLUS : return x + y;
+               case LogoTurtleParser.MINUS : return x - y;
+               case LogoTurtleParser.MULT : return x * y;
+               case LogoTurtleParser.MODULO : return x % y;
+               case LogoTurtleParser.DIV : return x / y;
+               default: unhandledTypeError(t);
+           }
+       }
+       if ( a instanceof Integer || b instanceof Integer ) {
+           int x = ((Number)a).intValue();
+           int y = ((Number)b).intValue();
+           switch (t.getType()) {
+               case LogoTurtleParser.PLUS : return x + y;
+               case LogoTurtleParser.MINUS : return x - y;
+               case LogoTurtleParser.MULT : return x * y;
+               case LogoTurtleParser.MODULO : return x % y;
+               case LogoTurtleParser.DIV : return x / y;
+               default: unhandledTypeError(t);
+           }
+       }       
+       return null;
 	}
 
 	Object and(Tree t) {
@@ -118,14 +145,6 @@ public class Interpreter {
 			exec(child);
 
 		return null;
-	}
-
-	Object div(Tree t) {
-		log.info("dividing " + t.toStringTree());
-		int x = (Integer) exec(t.getChild(0));
-		int y = (Integer) exec(t.getChild(1));
-		int z = x / y;
-		return z;
 	}
 
 	Object equality(Tree t) {
@@ -147,7 +166,7 @@ public class Interpreter {
 		case LogoTurtleParser.BYVAL:
 			return val(t);
 		case LogoTurtleParser.DIV:
-			return div(t); // /
+			return math(t); // /
 		case LogoTurtleParser.EQ:
 			return equality(t); // ==
 		case LogoTurtleParser.GT:
@@ -157,7 +176,7 @@ public class Interpreter {
 		case LogoTurtleParser.ID:
 			return id(t);
 		case LogoTurtleParser.IF:
-			unhandledTypeError(t);
+			return if_(t);
 		case LogoTurtleParser.IFELSE:
 			return ifelse(t);
 		case LogoTurtleParser.LT:
@@ -167,23 +186,27 @@ public class Interpreter {
 		case LogoTurtleParser.MAKE:
 			return make(t);
 		case LogoTurtleParser.MINUS:
-			return minus(t); // -
+			return math(t); // -
 		case LogoTurtleParser.MODULO:
-			return modulo(t); // %
+			return math(t); // %
 		case LogoTurtleParser.MULT:
-			return mult(t); // *
+			return math(t); // *
 		case LogoTurtleParser.NOT:
 			return negate(t); // !
 		case LogoTurtleParser.NUMBER:
 			return Integer.parseInt(t.getText());
+		case LogoTurtleParser.FLOAT:
+			return Float.parseFloat(t.getText());
 		case LogoTurtleParser.OR:
 			return or(t); // ||
 		case LogoTurtleParser.PLUS:
-			return add(t); // +
+			return math(t); // +
 		case LogoTurtleParser.PRINT:
 			return print(t);
 		case LogoTurtleParser.WHILE:
 			return while_(t);
+		case LogoTurtleParser.FUNCTION:
+			return funct(t);
 		default:
 			unhandledTypeError(t);
 		}
@@ -270,31 +293,6 @@ public class Interpreter {
 		return value;
 	}
 
-	Object minus(Tree t) {
-		log.info("subtracting " + t.toStringTree());
-		int x = (Integer) exec(t.getChild(0));
-		int y = (Integer) exec(t.getChild(1));
-		int z = x - y;
-		return z;
-	}
-
-	Object modulo(Tree t) {
-		log.info("Modulo'ing " + t.toStringTree());
-		int x = (Integer) exec(t.getChild(0));
-		int y = (Integer) exec(t.getChild(1));
-		int z = x % y;
-
-		return z;
-	}
-
-	Object mult(Tree t) {
-		log.info("Multiplying " + t.toStringTree());
-		int x = (Integer) exec(t.getChild(0));
-		int y = (Integer) exec(t.getChild(1));
-		int z = x * y;
-		return z;
-	}
-
 	Object name(Tree t) {
 		String variableName = (String) exec(t.getChild(0));
 		log.info("Encountered variable or string " + variableName);
@@ -370,6 +368,12 @@ public class Interpreter {
 			}
 		}
 
+		return null;
+	}
+
+	Object funct(Tree t){
+		System.out.println("FUNCTION");
+		
 		return null;
 	}
 
