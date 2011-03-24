@@ -7,7 +7,10 @@ import org.antlr.runtime.TokenRewriteStream;
 import org.antlr.runtime.tree.CommonTree;
 import org.antlr.runtime.tree.Tree;
 
+import msu.cse.turtlegraphics.*;
+
 public class Interpreter {
+
 	/**
 	 * Implements the {@link Iterable} pattern for {@link Tree}.
 	 * 
@@ -64,9 +67,18 @@ public class Interpreter {
 
 	// -- Boolean truths
 	public static final Integer ZERO = new Integer(0);
-	Logger log = Logger.getLogger("Interpreter");
 
+	TurtleDisplayFrame frame = new TurtleDisplayFrame();
+
+	Logger log = Logger.getLogger("Interpreter");
 	HashMap<String, Object> memory = new HashMap<String, Object>();
+
+	Turtle turtle = new Turtle();
+
+	public Interpreter() {
+		frame.setVisible(true);
+		turtle.setCurrentTurtleDisplayCanvas(frame.getCurrentCanvas());
+	}
 
 	/**
 	 * Instantiate the interpreter based on an InputStream.
@@ -75,6 +87,8 @@ public class Interpreter {
 	 * @throws Exception
 	 */
 	public Interpreter(ANTLRStringStream in) throws Exception {
+		this();
+
 		// -- Parse the inpiut
 		LogoTurtleLexer lexer = new LogoTurtleLexer(in);
 		TokenRewriteStream tokens = new TokenRewriteStream(lexer);
@@ -93,8 +107,12 @@ public class Interpreter {
 	}
 
 	public Interpreter(CommonTree t) {
+		this();
+
+		// -- Execute the tree
 		exec(t);
 	}
+
 
 	Object math(Tree t) {
        Object a = exec( (CommonTree)t.getChild(0) );
@@ -131,6 +149,15 @@ public class Interpreter {
        return null;
 	}
 
+	Object add(Tree t) {
+		log.info("Adding " + t.toStringTree());
+		int x = (Integer) exec(t.getChild(0));
+		int y = (Integer) exec(t.getChild(1));
+		int z = x + y;
+		return z;
+
+	}
+
 	Object and(Tree t) {
 		log.info("and'ing " + t.toStringTree());
 		Boolean x = (Boolean) exec(t.getChild(0));
@@ -138,12 +165,44 @@ public class Interpreter {
 		return x && y;
 	}
 
+	private Object backward(Tree t) {
+		Tree child = t.getChild(0);
+
+		log.info("Moving backward " + t.getText());
+
+		turtle.turtleBackward((Integer) exec(child));
+		return null;
+	}
+
+	private Object beginFill(Tree t) {
+		log.info("Beginning fill");
+		turtle.turtleBeginFillPolygon();
+		return null;
+	}
+
 	Object block(Tree t) {
-		log.info("Executing block" + t.toStringTree());
+		log.info("Executing block " + t.toStringTree());
 
 		for (Tree child : new IterableTree(t))
 			exec(child);
 
+		return null;
+	}
+
+	private Object circle(Tree t) {
+		Tree radius = t.getChild(0);
+		Tree angle = t.getChild(1);
+
+		log.info("Drawing circle with args " + radius.getText() + ", "
+				+ angle.getText());
+
+		turtle.turtleCircle((Integer) exec(radius), (Integer) exec(angle));
+		return null;
+	}
+
+	private Object endFill(Tree t) {
+		log.info("Ending fill");
+		turtle.turtleEndFillPolygon();
 		return null;
 	}
 
@@ -161,14 +220,28 @@ public class Interpreter {
 
 		case LogoTurtleParser.AND:
 			return and(t); // &&
+		case LogoTurtleParser.BACKWARD:
+		case LogoTurtleParser.BACKWARD2:
+			return backward(t);
+		case LogoTurtleParser.BEGINFILL:
+			return beginFill(t);
 		case LogoTurtleParser.BYNAME:
 			return name(t);
 		case LogoTurtleParser.BYVAL:
 			return val(t);
+		case LogoTurtleParser.CIRCLE:
+			return circle(t);
+		case LogoTurtleParser.COLOR:
+			return setPenColor(t);
 		case LogoTurtleParser.DIV:
 			return math(t); // /
+		case LogoTurtleParser.ENDFILL:
+			return endFill(t);
 		case LogoTurtleParser.EQ:
 			return equality(t); // ==
+		case LogoTurtleParser.FORWARD:
+		case LogoTurtleParser.FORWARD2:
+			return backward(t);
 		case LogoTurtleParser.GT:
 			return greaterThan(t); // >
 		case LogoTurtleParser.GTE:
@@ -179,6 +252,9 @@ public class Interpreter {
 			return if_(t);
 		case LogoTurtleParser.IFELSE:
 			return ifelse(t);
+		case LogoTurtleParser.LEFT:
+		case LogoTurtleParser.LEFT2:
+			return left(t);
 		case LogoTurtleParser.LT:
 			return lessThan(t); // <
 		case LogoTurtleParser.LTE:
@@ -199,10 +275,22 @@ public class Interpreter {
 			return Float.parseFloat(t.getText());
 		case LogoTurtleParser.OR:
 			return or(t); // ||
+		case LogoTurtleParser.PENDOWN:
+			return penDown(t);
+		case LogoTurtleParser.PENUP:
+			return penUp(t);
 		case LogoTurtleParser.PLUS:
 			return math(t); // +
 		case LogoTurtleParser.PRINT:
 			return print(t);
+		case LogoTurtleParser.REPEAT:
+			return repeat(t);
+		case LogoTurtleParser.RIGHT:
+		case LogoTurtleParser.RIGHT2:
+			return right(t);
+		case LogoTurtleParser.SETHEADING:
+		case LogoTurtleParser.SETHEADING2:
+			return setHeading(t);
 		case LogoTurtleParser.WHILE:
 			return while_(t);
 		case LogoTurtleParser.FUNCTION:
@@ -268,6 +356,15 @@ public class Interpreter {
 		}
 	}
 
+	private Object left(Tree t) {
+		Tree child = t.getChild(0);
+
+		log.info("Turning left " + t.getText());
+
+		turtle.turtleLeft((Integer) exec(child));
+		return null;
+	}
+
 	Object lessThan(Tree t) {
 		log.info("evaluating " + t.toStringTree());
 		int x = (Integer) exec(t.getChild(0));
@@ -311,6 +408,18 @@ public class Interpreter {
 		return x || y;
 	}
 
+	private Object penDown(Tree t) {
+		log.info("Pen Down");
+		turtle.turtlePenDown();
+		return null;
+	}
+
+	private Object penUp(Tree t) {
+		log.info("Pen Up");
+		turtle.turtlePenUp();
+		return null;
+	}
+
 	Object print(Tree t) {
 		log.info("Printing " + t.toStringTree());
 
@@ -326,6 +435,45 @@ public class Interpreter {
 
 		System.out.println();
 
+		return null;
+	}
+
+	private Object repeat(Tree t) {
+		Integer count = (Integer) exec(t.getChild(0));
+		Tree blk = t.getChild(1);
+
+		log.info("Repeating block " + count + "times: " + blk.toStringTree());
+
+		for (int i = 0; i < count; i++) {
+			exec(blk);
+		}
+
+		return null;
+	}
+
+	private Object right(Tree t) {
+		Tree child = t.getChild(0);
+
+		log.info("Turning right " + t.getText());
+
+		turtle.turtleRight((Integer) exec(child));
+		return null;
+	}
+
+	private Object setHeading(Tree t) {
+		Tree child = t.getChild(0);
+
+		log.info("Setting heading " + t.getText());
+
+		turtle.turtleSetHeading(((Double) exec(child)));
+		return null;
+	}
+
+	private Object setPenColor(Tree t) {
+		Integer r = (Integer) exec(t.getChild(0));
+		Integer g = (Integer) exec(t.getChild(1));
+		Integer b = (Integer) exec(t.getChild(2));
+		turtle.turtleSetColor(r, g, b);
 		return null;
 	}
 
