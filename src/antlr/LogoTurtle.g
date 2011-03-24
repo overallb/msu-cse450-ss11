@@ -86,10 +86,9 @@ statement
         | while_
         | if_
         | ifelse_
-        | function)
+        | function
         | repeat 
         | turtle ) COMMENT?
-
     ;
 
 val: ':'^ ID;
